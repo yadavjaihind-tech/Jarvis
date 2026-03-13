@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#00aaff"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="JARVIS"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
+<title>JARVIS</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #050d1a; --border: #0d3b6e; --accent: #00aaff; --accent2: #00ffcc;
+    --red: #ff4466; --text: #c8e6ff; --dim: #3a6a99;
+    --user-bubble: #0a2540; --bot-bubble: #051829;
+    --glow: 0 0 12px #00aaff55; --glow2: 0 0 18px #00ffcc44; --glow-red: 0 0 16px #ff446688;
+    --safe-top: env(safe-area-inset-top,0px); --safe-bottom: env(safe-area-inset-bottom,0px);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; height:100dvh; background:var(--bg); font-family:'Share Tech Mono',monospace; color:var(--text); overflow:hidden; }
+
+  body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(0,170,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,170,255,0.04) 1px,transparent 1px); background-size:40px 40px; pointer-events:none; z-index:0; }
+  body::after { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px); pointer-events:none; z-index:997; }
+
+  .corner { position:fixed; width:20px; height:20px; z-index:5; }
+  .corner.tl{top:calc(8px + var(--safe-top));left:8px;border-top:1px solid var(--accent);border-left:1px solid var(--accent);}
+  .corner.tr{top:calc(8px + var(--safe-top));right:8px;border-top:1px solid var(--accent);border-right:1px solid var(--accent);}
+  .corner.bl{bottom:calc(8px + var(--safe-bottom));left:8px;border-bottom:1px solid var(--accent);border-left:1px solid var(--accent);}
+  .corner.br{bottom:calc(8px + var(--safe-bottom));right:8px;border-bottom:1px solid var(--accent);border-right:1px solid var(--accent);}
+
+  /* ── Splash ── */
+  #splash { display:flex; position:fixed; inset:0; z-index:999; background:var(--bg); flex-direction:column; align-items:center; justify-content:center; gap:20px; transition:opacity .5s; }
+  #splash.hide { opacity:0; pointer-events:none; }
+  .splash-ring { width:80px; height:80px; border-radius:50%; border:2px solid var(--accent); box-shadow:var(--glow),inset 0 0 20px #00aaff33; display:flex; align-items:center; justify-content:center; animation:pulse-ring 2s ease-in-out infinite; }
+  .splash-ring svg { width:36px; height:36px; fill:var(--accent); }
+  .splash-title { font-family:'Orbitron',monospace; font-size:1.4rem; font-weight:800; color:var(--accent); letter-spacing:5px; }
+  .splash-sub { font-size:0.6rem; color:var(--dim); letter-spacing:3px; }
+  .splash-bar { width:180px; height:2px; background:#0d3b6e; border-radius:1px; overflow:hidden; }
+  .splash-progress { height:100%; background:var(--accent); border-radius:1px; animation:load-bar 1.2s ease forwards; }
+  @keyframes load-bar { from{width:0%} to{width:100%} }
+
+  /* ── API Key Setup Screen ── */
+  #setup-screen { display:none; position:fixed; inset:0; z-index:100; background:var(--bg); flex-direction:column; align-items:center; justify-content:center; padding:32px 24px; gap:0; }
+  #setup-screen.show { display:flex; }
+  .setup-logo { width:60px; height:60px; border-radius:50%; border:2px solid var(--accent); box-shadow:var(--glow); display:flex; align-items:center; justify-content:center; margin-bottom:20px; animation:pulse-ring 2.5s ease-in-out infinite; }
+  .setup-logo svg { width:28px; height:28px; fill:var(--accent); }
+  .setup-title { font-family:'Orbitron',monospace; font-size:1rem; font-weight:800; color:var(--accent); letter-spacing:4px; margin-bottom:6px; }
+  .setup-sub { font-size:0.62rem; color:var(--dim); letter-spacing:2px; margin-bottom:28px; }
+  .setup-card { width:100%; max-width:400px; background:#070f20; border:1px solid var(--border); border-radius:8px; padding:24px; }
+  .setup-card h2 { font-family:'Orbitron',monospace; font-size:0.75rem; color:var(--accent2); letter-spacing:2px; margin-bottom:6px; }
+  .setup-card p { font-size:0.72rem; color:var(--dim); line-height:1.7; margin-bottom:18px; }
+  .setup-card p a { color:var(--accent); text-decoration:none; }
+  .setup-label { font-size:0.65rem; color:var(--dim); letter-spacing:1.5px; margin-bottom:6px; display:block; }
+  .key-input-wrap { display:flex; gap:8px; margin-bottom:10px; }
+  #api-key-input { flex:1; background:#050d1a; border:1px solid var(--border); border-radius:4px; padding:10px 12px; color:var(--text); font-family:'Share Tech Mono',monospace; font-size:0.8rem; outline:none; transition:border-color .2s; }
+  #api-key-input:focus { border-color:var(--accent); }
+  #api-key-input::placeholder { color:var(--dim); }
+  #toggle-key-vis { background:transparent; border:1px solid var(--border); color:var(--dim); width:36px; border-radius:4px; cursor:pointer; font-size:0.75rem; flex-shrink:0; }
+  #key-error { font-size:0.65rem; color:var(--red); min-height:16px; margin-bottom:12px; letter-spacing:1px; display:none; }
+  #key-error.show { display:block; }
+  #save-key-btn { width:100%; background:var(--accent); color:var(--bg); border:none; padding:12px; border-radius:4px; font-family:'Orbitron',monospace; font-size:0.75rem; font-weight:800; letter-spacing:2px; cursor:pointer; transition:all .2s; margin-bottom:14px; }
+  #save-key-btn:hover { box-shadow:var(--glow); }
+  #save-key-btn:disabled { opacity:.4; cursor:not-allowed; }
+  .setup-note { font-size:0.62rem; color:var(--dim); line-height:1.6; border-top:1px solid var(--border); padding-top:14px; }
+  .setup-note strong { color:var(--accent2); }
+
+  /* ── App ── */
+  #app { display:flex; flex-direction:column; height:100%; height:100dvh; position:relative; z-index:1; }
+
+  header { display:flex; align-items:center; gap:10px; padding:10px 14px; padding-top:calc(10px + var(--safe-top)); border-bottom:1px solid var(--border); background:#070f20ee; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); flex-shrink:0; z-index:10; }
+  .logo-ring { width:36px; height:36px; border-radius:50%; border:2px solid var(--accent); box-shadow:var(--glow),inset 0 0 10px #00aaff22; display:flex; align-items:center; justify-content:center; animation:pulse-ring 2.5s ease-in-out infinite; flex-shrink:0; transition:border-color .3s; }
+  .logo-ring svg { width:16px; height:16px; fill:var(--accent); }
+  .logo-ring.speaking { border-color:var(--accent2); animation:speak-pulse .6s ease-in-out infinite alternate; }
+  @keyframes pulse-ring { 0%,100%{box-shadow:var(--glow),inset 0 0 10px #00aaff22;} 50%{box-shadow:0 0 20px #00aaff88,inset 0 0 18px #00aaff44;} }
+  @keyframes speak-pulse { 0%{box-shadow:0 0 8px #00ffcc44;} 100%{box-shadow:0 0 26px #00ffccaa;} }
+
+  .header-info { flex:1; min-width:0; }
+  .header-info h1 { font-family:'Orbitron',monospace; font-size:0.9rem; font-weight:800; color:var(--accent); letter-spacing:3px; }
+  .header-info p { font-size:0.52rem; color:var(--dim); letter-spacing:1.5px; margin-top:1px; }
+
+  .header-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .tts-label { display:flex; align-items:center; gap:5px; cursor:pointer; }
+  .tts-label span { font-size:0.52rem; color:var(--dim); letter-spacing:1.5px; }
+  .toggle-track { width:26px; height:14px; background:#0a1a2e; border:1px solid var(--border); border-radius:999px; position:relative; transition:all .3s; }
+  .toggle-thumb { width:8px; height:8px; background:var(--dim); border-radius:50%; position:absolute; top:2px; left:2px; transition:all .3s; }
+  #tts-toggle:checked ~ .toggle-track { border-color:var(--accent2); background:#001a14; }
+  #tts-toggle:checked ~ .toggle-track .toggle-thumb { left:14px; background:var(--accent2); }
+  #tts-toggle { display:none; }
+
+  .icon-btn-sm { background:transparent; border:1px solid var(--border); color:var(--dim); width:30px; height:30px; border-radius:4px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .icon-btn-sm svg { width:14px; height:14px; }
+  .icon-btn-sm:hover { border-color:var(--accent); color:var(--accent); }
+
+  .status-dot { width:6px; height:6px; border-radius:50%; background:var(--accent2); box-shadow:var(--glow2); animation:blink 1.8s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+  #offline-badge { display:none; text-align:center; padding:5px; background:#1a0a00; border-bottom:1px solid #663300; font-size:0.6rem; color:#ff8844; letter-spacing:1.5px; flex-shrink:0; }
+  #offline-badge.show { display:block; }
+
+  #chat { flex:1; overflow-y:auto; overflow-x:hidden; padding:14px; display:flex; flex-direction:column; gap:12px; scroll-behavior:smooth; -webkit-overflow-scrolling:touch; }
+  #chat::-webkit-scrollbar { width:3px; }
+  #chat::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+  .msg { display:flex; gap:8px; align-items:flex-start; animation:fadeSlide .3s ease both; max-width:88%; }
+  @keyframes fadeSlide { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
+  .msg.user { flex-direction:row-reverse; align-self:flex-end; }
+  .msg.bot  { align-self:flex-start; }
+
+  .avatar { width:26px; height:26px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.5rem; font-family:'Orbitron',monospace; font-weight:800; }
+  .bot  .avatar { background:#051829; border:1px solid var(--accent); color:var(--accent); box-shadow:var(--glow); }
+  .user .avatar { background:#0a2540; border:1px solid var(--accent2); color:var(--accent2); }
+
+  .bubble { padding:10px 13px; border-radius:4px; font-size:0.8rem; line-height:1.6; }
+  .bot  .bubble { background:var(--bot-bubble); border:1px solid var(--border); border-left:2px solid var(--accent); }
+  .user .bubble { background:var(--user-bubble); border:1px solid #0d3b6e; border-right:2px solid var(--accent2); text-align:right; }
+  .bubble.speaking { border-left-color:var(--accent2)!important; }
+
+  .tts-icon { display:inline-flex; align-items:center; gap:2px; margin-left:6px; vertical-align:middle; }
+  .tts-icon span { width:2px; background:var(--accent2); border-radius:1px; display:inline-block; animation:tbar .5s ease-in-out infinite alternate; }
+  .tts-icon span:nth-child(1){height:4px;} .tts-icon span:nth-child(2){height:8px;animation-delay:.15s;} .tts-icon span:nth-child(3){height:4px;animation-delay:.3s;}
+  @keyframes tbar { from{opacity:.3;transform:scaleY(.4);} to{opacity:1;transform:scaleY(1);} }
+
+  .typing-dots { display:flex; gap:4px; align-items:center; padding:3px 0; }
+  .typing-dots span { width:5px; height:5px; border-radius:50%; background:var(--accent); animation:dbounce 1.2s ease-in-out infinite; }
+  .typing-dots span:nth-child(2){animation-delay:.2s;} .typing-dots span:nth-child(3){animation-delay:.4s;}
+  @keyframes dbounce { 0%,80%,100%{transform:scale(.7);opacity:.5;} 40%{transform:scale(1.1);opacity:1;} }
+
+  /* ── Voice Overlay ── */
+  #voice-overlay { display:none; position:fixed; inset:0; z-index:200; background:rgba(5,13,26,0.94); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); flex-direction:column; align-items:center; justify-content:center; gap:22px; }
+  #voice-overlay.active { display:flex; }
+  .orb-wrap { position:relative; width:130px; height:130px; display:flex; align-items:center; justify-content:center; }
+  .orb-ripple { position:absolute; border-radius:50%; border:1px solid var(--red); animation:ripple 1.6s ease-out infinite; }
+  .orb-ripple:nth-child(1){width:100%;height:100%;} .orb-ripple:nth-child(2){width:70%;height:70%;animation-delay:.5s;} .orb-ripple:nth-child(3){width:45%;height:45%;animation-delay:1s;}
+  @keyframes ripple { 0%{transform:scale(.8);opacity:.8;} 100%{transform:scale(1.2);opacity:0;} }
+  .orb-core { width:60px; height:60px; border-radius:50%; z-index:2; background:radial-gradient(circle at 35% 35%,#ff8899,#ff2244,#8b0000); box-shadow:0 0 18px #ff446688; display:flex; align-items:center; justify-content:center; animation:core-pulse .7s ease-in-out infinite alternate; }
+  @keyframes core-pulse { 0%{transform:scale(.95);} 100%{transform:scale(1.05);} }
+  .orb-core svg { width:22px; height:22px; fill:white; }
+  .waveform { display:flex; align-items:center; gap:3px; height:36px; }
+  .wbar { width:3px; background:var(--red); border-radius:2px; animation:wbar .5s ease-in-out infinite alternate; }
+  .wbar:nth-child(1){animation-delay:0s;} .wbar:nth-child(2){animation-delay:.05s;} .wbar:nth-child(3){animation-delay:.1s;} .wbar:nth-child(4){animation-delay:.15s;} .wbar:nth-child(5){animation-delay:.2s;} .wbar:nth-child(6){animation-delay:.15s;} .wbar:nth-child(7){animation-delay:.1s;} .wbar:nth-child(8){animation-delay:.05s;} .wbar:nth-child(9){animation-delay:0s;}
+  @keyframes wbar { from{height:4px;opacity:.4;} to{height:28px;opacity:1;} }
+  #voice-status { font-family:'Orbitron',monospace; font-size:.65rem; color:var(--red); letter-spacing:3px; }
+  #voice-live { font-size:.75rem; color:var(--text); max-width:270px; text-align:center; min-height:32px; opacity:.8; font-style:italic; padding:0 16px; }
+  #voice-cancel { background:transparent; border:1px solid var(--red); color:var(--red); padding:7px 18px; border-radius:4px; font-family:'Share Tech Mono',monospace; font-size:.65rem; letter-spacing:2px; cursor:pointer; }
+
+  /* ── Footer ── */
+  footer { padding:10px 12px; padding-bottom:calc(10px + var(--safe-bottom)); border-top:1px solid var(--border); background:#050d1aee; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); flex-shrink:0; z-index:10; }
+  .input-row { display:flex; gap:8px; align-items:flex-end; background:#070f20; border:1px solid var(--border); border-radius:6px; padding:8px 12px; transition:border-color .2s; }
+  .input-row:focus-within { border-color:var(--accent); }
+  #user-input { flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:'Share Tech Mono',monospace; font-size:0.85rem; resize:none; max-height:90px; line-height:1.5; }
+  #user-input::placeholder { color:var(--dim); }
+  .btn-icon { background:transparent; border:1px solid var(--border); color:var(--dim); width:36px; height:36px; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s; flex-shrink:0; }
+  .btn-icon svg { width:16px; height:16px; }
+  #mic-btn { border-color:var(--red); color:var(--red); }
+  #mic-btn:hover,#mic-btn.active { background:var(--red); color:white; }
+  #send-btn { border-color:var(--accent); color:var(--accent); }
+  #send-btn:hover { background:var(--accent); color:var(--bg); }
+  #send-btn:disabled,#mic-btn:disabled { opacity:.3; pointer-events:none; }
+  .hint { font-size:0.55rem; color:var(--dim); letter-spacing:1px; margin-top:6px; text-align:center; }
+</style>
+</head>
+<body>
+
+<div class="corner tl"></div><div class="corner tr"></div>
+<div class="corner bl"></div><div class="corner br"></div>
+
+<!-- Splash -->
+<div id="splash">
+  <div class="splash-ring"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm0-14a6 6 0 1 0 6 6 6 6 0 0 0-6-6zm0 10a4 4 0 1 1 4-4 4 4 0 0 1-4 4z"/></svg></div>
+  <div class="splash-title">J.A.R.V.I.S</div>
+  <div class="splash-sub">INITIALISING SYSTEMS...</div>
+  <div class="splash-bar"><div class="splash-progress"></div></div>
+</div>
+
+<!-- API Key Setup Screen -->
+<div id="setup-screen">
+  <div class="setup-logo"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm0-14a6 6 0 1 0 6 6 6 6 0 0 0-6-6zm0 10a4 4 0 1 1 4-4 4 4 0 0 1-4 4z"/></svg></div>
+  <div class="setup-title">J.A.R.V.I.S</div>
+  <div class="setup-sub">ONE-TIME SETUP REQUIRED</div>
+  <div class="setup-card">
+    <h2>CONNECT TO AI ENGINE</h2>
+    <p>JARVIS needs an Anthropic API key to power its intelligence. Get your free key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys → Create Key.</p>
+    <label class="setup-label">YOUR API KEY</label>
+    <div class="key-input-wrap">
+      <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off" autocorrect="off" spellcheck="false"/>
+      <button id="toggle-key-vis" title="Show/hide key">👁</button>
+    </div>
+    <div id="key-error"></div>
+    <button id="save-key-btn" disabled>ACTIVATE JARVIS</button>
+    <div class="setup-note">
+      <strong>Your key is stored only on this device</strong> — it never leaves your phone. It is saved in your browser's local storage and used only to call the Anthropic API directly.
+    </div>
+  </div>
+</div>
+
+<!-- Voice Overlay -->
+<div id="voice-overlay">
+  <div class="orb-wrap">
+    <div class="orb-ripple"></div><div class="orb-ripple"></div><div class="orb-ripple"></div>
+    <div class="orb-core"><svg viewBox="0 0 24 24"><path d="M12 15c1.66 0 3-1.34 3-3V6c0-1.66-1.34-3-3-3S9 4.34 9 6v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 15 6.7 12H5c0 3.41 2.72 6.23 6 6.72V21h2v-2.28c3.28-.49 6-3.31 6-6.72h-1.7z"/></svg></div>
+  </div>
+  <div class="waveform"><div class="wbar"></div><div class="wbar"></div><div class="wbar"></div><div class="wbar"></div><div class="wbar"></div><div class="wbar"></div><div class="wbar"></div><div class="wbar"></div><div class="wbar"></div></div>
+  <div id="voice-status">LISTENING...</div>
+  <div id="voice-live">Speak now — I'm ready.</div>
+  <button id="voice-cancel">✕ CANCEL</button>
+</div>
+
+<!-- Main App -->
+<div id="app">
+  <div id="offline-badge">⚡ OFFLINE — AI responses unavailable until reconnected</div>
+  <header>
+    <div class="logo-ring" id="logo-ring"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm0-14a6 6 0 1 0 6 6 6 6 0 0 0-6-6zm0 10a4 4 0 1 1 4-4 4 4 0 0 1-4 4z"/></svg></div>
+    <div class="header-info">
+      <h1>J.A.R.V.I.S</h1>
+      <p>JUST A RATHER VERY INTELLIGENT SYSTEM</p>
+    </div>
+    <div class="header-actions">
+      <label class="tts-label">
+        <input type="checkbox" id="tts-toggle" checked/>
+        <span>VOICE</span>
+        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+      </label>
+      <!-- Settings / change key button -->
+      <button class="icon-btn-sm" id="settings-btn" title="Change API Key">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <div class="status-dot"></div>
+    </div>
+  </header>
+  <div id="chat"></div>
+  <footer>
+    <div class="input-row">
+      <textarea id="user-input" rows="1" placeholder="Ask JARVIS anything..."></textarea>
+      <button class="btn-icon" id="mic-btn">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 15c1.66 0 3-1.34 3-3V6c0-1.66-1.34-3-3-3S9 4.34 9 6v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 15 6.7 12H5c0 3.41 2.72 6.23 6 6.72V21h2v-2.28c3.28-.49 6-3.31 6-6.72h-1.7z"/></svg>
+      </button>
+      <button class="btn-icon" id="send-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+    <p class="hint">TAP MIC TO SPEAK &nbsp;·&nbsp; VOICE TOGGLE &nbsp;·&nbsp; ENTER TO SEND</p>
+  </footer>
+</div>
+
+<script>
+const chat=document.getElementById('chat'),userInput=document.getElementById('user-input'),sendBtn=document.getElementById('send-btn'),micBtn=document.getElementById('mic-btn'),ttsToggle=document.getElementById('tts-toggle'),voiceOverlay=document.getElementById('voice-overlay'),voiceStatus=document.getElementById('voice-status'),voiceLive=document.getElementById('voice-live'),voiceCancel=document.getElementById('voice-cancel'),logoRing=document.getElementById('logo-ring'),offlineBadge=document.getElementById('offline-badge'),splash=document.getElementById('splash'),setupScreen=document.getElementById('setup-screen'),apiKeyInput=document.getElementById('api-key-input'),saveKeyBtn=document.getElementById('save-key-btn'),keyError=document.getElementById('key-error'),toggleKeyVis=document.getElementById('toggle-key-vis'),settingsBtn=document.getElementById('settings-btn');
+
+const history=[];
+let recognition=null,isListening=false,activeBubble=null;
+
+const SYSTEM_PROMPT=`You are JARVIS (Just A Rather Very Intelligent System), a sophisticated AI personal work assistant. You are helpful, precise, and slightly formal — like a highly capable executive assistant. You help with drafting emails, brainstorming ideas, summarising content, writing, planning, research, and general work productivity. Keep responses clear and actionable. When responding to voice queries, keep answers concise and conversational (2–4 sentences) unless detailed output is explicitly requested. Always address the user professionally.`;
+
+// ── API Key management ──
+function getKey(){ return localStorage.getItem('jarvis_api_key')||''; }
+function saveKey(k){ localStorage.setItem('jarvis_api_key',k); }
+function clearKey(){ localStorage.removeItem('jarvis_api_key'); }
+
+// ── Setup screen ──
+apiKeyInput.addEventListener('input',()=>{
+  const v=apiKeyInput.value.trim();
+  saveKeyBtn.disabled=v.length<20;
+  keyError.classList.remove('show');
+});
+toggleKeyVis.addEventListener('click',()=>{ apiKeyInput.type=apiKeyInput.type==='password'?'text':'password'; });
+saveKeyBtn.addEventListener('click',()=>{
+  const k=apiKeyInput.value.trim();
+  if(!k.startsWith('sk-ant-')){ keyError.textContent='⚠ Key must start with sk-ant-'; keyError.classList.add('show'); return; }
+  saveKey(k);
+  setupScreen.classList.remove('show');
+  bootApp();
+});
+settingsBtn.addEventListener('click',()=>{
+  clearKey();
+  history.length=0;
+  chat.innerHTML='';
+  window.speechSynthesis.cancel();
+  apiKeyInput.value='';
+  saveKeyBtn.disabled=true;
+  keyError.classList.remove('show');
+  setupScreen.classList.add('show');
+});
+
+// ── Splash & init ──
+setTimeout(()=>{
+  splash.classList.add('hide');
+  const key=getKey();
+  if(key){ bootApp(); } else { setupScreen.classList.add('show'); }
+},1400);
+
+function bootApp(){
+  setTimeout(()=>{
+    const welcome=`Good day. JARVIS is online and ready.\n\n🎤 Tap the mic to speak\n🔊 Toggle voice reply on/off\n⚙ Tap settings to change your API key\n\nHow may I assist you today?`;
+    const bub=appendMessage('bot',welcome);
+    if(ttsToggle.checked) setTimeout(()=>speakText("Good day. JARVIS is online. How may I assist you today?",bub),300);
+  },200);
+}
+
+// ── Offline ──
+function updateOnline(){ offlineBadge.classList.toggle('show',!navigator.onLine); }
+window.addEventListener('online',updateOnline); window.addEventListener('offline',updateOnline); updateOnline();
+
+// ── Chat helpers ──
+function appendMessage(role,text){
+  const msg=document.createElement('div'); msg.className=`msg ${role}`;
+  const av=document.createElement('div'); av.className='avatar'; av.textContent=role==='bot'?'J':'YOU';
+  const bub=document.createElement('div'); bub.className='bubble';
+  bub.innerHTML=text.replace(/\n/g,'<br>');
+  msg.appendChild(av); msg.appendChild(bub); chat.appendChild(msg);
+  chat.scrollTop=chat.scrollHeight; return bub;
+}
+function showTyping(){
+  const msg=document.createElement('div'); msg.id='typing-ind'; msg.className='msg bot';
+  const av=document.createElement('div'); av.className='avatar'; av.textContent='J';
+  const bub=document.createElement('div'); bub.className='bubble';
+  bub.innerHTML='<div class="typing-dots"><span></span><span></span><span></span></div>';
+  msg.appendChild(av); msg.appendChild(bub); chat.appendChild(msg); chat.scrollTop=chat.scrollHeight;
+}
+function removeTyping(){ const t=document.getElementById('typing-ind'); if(t)t.remove(); }
+
+// ── API call ──
+async function sendMessage(text){
+  text=(text||userInput.value).trim(); if(!text) return;
+  const key=getKey();
+  if(!key){ setupScreen.classList.add('show'); return; }
+  if(!navigator.onLine){ appendMessage('bot','I am offline. Please reconnect and try again.'); return; }
+  userInput.value=''; userInput.style.height='auto';
+  sendBtn.disabled=true; micBtn.disabled=true;
+  appendMessage('user',text);
+  history.push({role:'user',content:text});
+  showTyping();
+  try {
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:SYSTEM_PROMPT,messages:history})
+    });
+    const data=await res.json();
+    removeTyping();
+    if(data.error){
+      const msg=data.error.message||'API error';
+      if(data.error.type==='authentication_error'){ keyError.textContent='⚠ Invalid API key — please re-enter'; keyError.classList.add('show'); setupScreen.classList.add('show'); clearKey(); return; }
+      appendMessage('bot',`Error: ${msg}`); return;
+    }
+    const reply=data?.content?.[0]?.text||'I encountered an issue processing your request.';
+    history.push({role:'assistant',content:reply});
+    const bub=appendMessage('bot',reply);
+    if(ttsToggle.checked) speakText(reply,bub);
+  } catch(e){
+    removeTyping();
+    appendMessage('bot','Network error. Please check your connection and try again.');
+  }
+  sendBtn.disabled=false; micBtn.disabled=false; userInput.focus();
+}
+
+// ── TTS ──
+function speakText(text,bubble){
+  window.speechSynthesis.cancel();
+  const clean=text.replace(/\*\*/g,'').replace(/\*/g,'').replace(/#{1,6}\s?/g,'').replace(/`/g,'').replace(/•/g,'').replace(/\n/g,' ').trim();
+  const utter=new SpeechSynthesisUtterance(clean);
+  utter.rate=0.93; utter.pitch=0.82; utter.volume=1;
+  const voices=window.speechSynthesis.getVoices();
+  const pick=voices.find(v=>/Daniel|Google UK|en-GB|British/i.test(v.name+v.lang))||voices.find(v=>v.lang.startsWith('en'));
+  if(pick) utter.voice=pick;
+  if(bubble){ bubble.classList.add('speaking'); bubble.innerHTML+=`<span class="tts-icon"><span></span><span></span><span></span></span>`; activeBubble=bubble; }
+  logoRing.classList.add('speaking');
+  utter.onend=utter.onerror=()=>{ logoRing.classList.remove('speaking'); if(activeBubble){ const ic=activeBubble.querySelector('.tts-icon'); if(ic)ic.remove(); activeBubble.classList.remove('speaking'); activeBubble=null; } };
+  window.speechSynthesis.speak(utter);
+}
+
+// ── STT ──
+function initSTT(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ micBtn.disabled=true; return; }
+  recognition=new SR(); recognition.continuous=false; recognition.interimResults=true; recognition.lang='en-US';
+  recognition.onstart=()=>{ isListening=true; voiceOverlay.classList.add('active'); micBtn.classList.add('active'); voiceStatus.textContent='LISTENING...'; voiceLive.textContent="Speak now — I'm ready."; };
+  recognition.onresult=e=>{ let interim='',final=''; for(let i=e.resultIndex;i<e.results.length;i++){ if(e.results[i].isFinal)final+=e.results[i][0].transcript; else interim+=e.results[i][0].transcript; } voiceLive.textContent=final||interim||'...'; if(final)voiceStatus.textContent='PROCESSING...'; };
+  recognition.onend=()=>{ const spoken=voiceLive.textContent.trim(); isListening=false; voiceOverlay.classList.remove('active'); micBtn.classList.remove('active'); if(spoken&&spoken!=="Speak now — I'm ready."&&spoken!=='...'){ window.speechSynthesis.cancel(); sendMessage(spoken); } };
+  recognition.onerror=e=>{ isListening=false; voiceOverlay.classList.remove('active'); micBtn.classList.remove('active'); };
+}
+
+micBtn.addEventListener('click',()=>{ if(!recognition){ appendMessage('bot','Voice input requires Chrome or Safari.'); return; } if(isListening){ recognition.stop(); return; } window.speechSynthesis.cancel(); recognition.start(); });
+voiceCancel.addEventListener('click',()=>{ if(recognition)recognition.abort(); isListening=false; voiceOverlay.classList.remove('active'); micBtn.classList.remove('active'); });
+sendBtn.addEventListener('click',()=>sendMessage());
+userInput.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendMessage(); } });
+userInput.addEventListener('input',()=>{ userInput.style.height='auto'; userInput.style.height=Math.min(userInput.scrollHeight,90)+'px'; });
+if(window.speechSynthesis){ window.speechSynthesis.getVoices(); window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices(); }
+
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+initSTT();
+</script>
+</body>
+</html>
